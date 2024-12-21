@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.project.questapp.entities.User;
 import com.project.questapp.repos.UserRepository;
+import com.project.questapp.services.UserService;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -24,51 +25,37 @@ import jakarta.transaction.Transactional;
 public class UserController {
 
     @PersistenceContext 
-    private EntityManager entityManager; // EntityManager eklendi
+    private EntityManager entityManager; 
     
-    private final UserRepository userRepository;
+    private final UserService userService;
 
-    public UserController(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public UserController(UserService userService) {
+        this.userService = userService;
     }
     
     @GetMapping
     public List<User> getAllUsers() {
-        return userRepository.findAll();
+        return userService.getAllUsers();
     }
     
     @PostMapping
     @Transactional
     public User createUser(@RequestBody User newUser) {
-        if (newUser.getId() == null) {
-            entityManager.persist(newUser); // Yeni kullanıcılar için ID null olacak, persist kullan
-        } else {
-            newUser = entityManager.merge(newUser); // Varlık zaten mevcutsa merge kullan
-        }
-        return newUser;
+        return userService.saveOneUser(newUser);
     }
     
     @GetMapping("/{userId}")
     public User getOneUser(@PathVariable Long userId) {
-        return userRepository.findById(userId).orElse(null);
+        return userService.getOneUser(userId);
     }
     
     @PutMapping("/{userId}")
     public User updateOneUser(@PathVariable Long userId, @RequestBody User newUser) {
-        Optional<User> user = userRepository.findById(userId);
-        if (user.isPresent()) {
-            User foundUser = user.get();
-            foundUser.setUser_name(newUser.getUser_name());
-            foundUser.setPassword(newUser.getPassword());
-            userRepository.save(foundUser);
-            return foundUser;
-        } else {
-            return null;
-        }
+    	return userService.updateOneUser(userId, newUser);
     }
     
     @DeleteMapping("/{userId}")
     public void deleteOneUser(@PathVariable Long userId) {
-        userRepository.deleteById(userId);
+        userService.deleteById(userId);
     }
 }

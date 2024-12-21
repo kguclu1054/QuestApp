@@ -21,7 +21,7 @@ public class User {
     private String user_name;
     private String password;
 
-    // @Version, @PrePersist ve @PreUpdate anotasyonları kaldırıldı
+
 }
 
 
