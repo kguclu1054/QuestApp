@@ -6,6 +6,10 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
+
 import com.project.questapp.entities.Post;
 import com.project.questapp.entities.User;
 import com.project.questapp.repos.PostRepository;
@@ -17,13 +21,16 @@ public class PostService {
     private final PostRepository postRepository;
     private final UserService userService;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     public PostService(PostRepository postRepository, UserService userService) {
         this.postRepository = postRepository;
         this.userService = userService;
     }
 
     @Transactional
-    public List<Post> getallPost(Optional<Long> userId) {
+    public List<Post> getAllPosts(Optional<Long> userId) {
         if (userId.isPresent()) {
             return postRepository.findByUserId(userId.get());
         } else {
@@ -38,12 +45,14 @@ public class PostService {
 
     @Transactional
     public Post createOnePost(PostCreateRequest newPostRequest) {
+        if (newPostRequest.getUserId() == null) {
+            throw new IllegalArgumentException("User ID must not be null");
+        }
         User user = userService.getOneUser(newPostRequest.getUserId());
         if (user == null) {
             throw new RuntimeException("User not found");
         }
         Post toSave = new Post();
-        toSave.setId(newPostRequest.getId());
         toSave.setText(newPostRequest.getText());
         toSave.setTitle(newPostRequest.getTitle());
         toSave.setUser(user);
@@ -53,11 +62,15 @@ public class PostService {
 
     @Transactional
     public Post updatePost(Long postId, PostCreateRequest updatePostRequest) {
-        Post post = postRepository.findByIdForUpdate(postId)
-            .orElseThrow(() -> new RuntimeException("Post not found"));
+        if (postId == null) {
+            throw new IllegalArgumentException("The given id must not be null");
+        }
+        Post post = entityManager.find(Post.class, postId, LockModeType.PESSIMISTIC_WRITE);
+        if (post == null) {
+            throw new RuntimeException("Post not found");
+        }
         post.setText(updatePostRequest.getText());
         post.setTitle(updatePostRequest.getTitle());
         return postRepository.save(post);
     }
 }
-
